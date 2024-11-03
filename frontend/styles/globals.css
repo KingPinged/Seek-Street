@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+    font-family: 'PressStart2P';
+    src: url('/fonts/PressStart.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+  }

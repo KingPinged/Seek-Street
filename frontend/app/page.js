@@ -130,35 +130,96 @@ export default function Home() {
   return (
     <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
       <div className="inline-block max-w-xl text-center justify-center">
-        <span className={title()}>Hide &nbsp;</span>
-        <span className={title({ color: "blue" })}>AND&nbsp;</span>
-        <br />
-        <span className={title()}>
-          seek physically &nbsp;
-        </span>
-        <br />
-        <span className={title({ color: "yellow" })}>BUT&nbsp;</span>
-        <span className={title()}>digitally too</span>
-
-        <div className={subtitle({ class: "mt-4" })}>
-          "Best Game Ever" - Mason L
-        </div>
-      </div>
-
-      <div className="flex gap-3">
-        <Link
-          isExternal
-          className={buttonStyles({
-            color: "primary",
-            radius: "full",
-            variant: "shadow",
-            size: "large"
-          })}
-          href={siteConfig.links.docs}
+        <motion.div
+          initial={{ opacity: 0, x: -100 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6 }}
         >
-          Start
-        </Link>
+          <span className={title()}>Hide &nbsp;</span>
+          <span className={title({ color: "blue" })}>AND&nbsp;</span>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <span className={title()}>
+            seek physically &nbsp;
+          </span>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: -100 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <span className={title({ color: "yellow" })}>BUT&nbsp;</span>
+          <span className={title()}>digitally too</span>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className={subtitle({ class: "mt-4" })}
+        >
+          "Best Game Ever" - Mason L
+        </motion.div>
       </div>
+
+      <motion.div
+        className="flex gap-3"
+        style={{ perspective: 2000 }}
+      >
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: -400,
+            rotateX: 90,
+            z: 100,
+            scale: 0.6
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            rotateX: 0,
+            z: 0,
+            scale: 1
+          }}
+          transition={{
+            type: "spring",
+            duration: 1.5,
+            delay: 0.8,
+            bounce: 0.7,
+            stiffness: 120,
+            damping: 12,
+            mass: 1.2
+          }}
+          whileHover={{
+            scale: 1.05,
+            rotateX: -10,
+            transition: { duration: 0.2 }
+          }}
+          style={{
+            transformStyle: "preserve-3d",
+            transformOrigin: "center center"
+          }}
+        >
+          <Link
+            isExternal
+            className={buttonStyles({
+              color: "primary",
+              radius: "full",
+              variant: "shadow",
+              size: "large"
+            })}
+            href={siteConfig.links.docs}
+          >
+            Start
+          </Link>
+        </motion.div>
+      </motion.div>
 
       <div className="mb-4">
         <Snippet hideSymbol variant="flat">
@@ -248,14 +309,6 @@ export default function Home() {
             </span>
           </Snippet>
         )}
-      </div>
-
-      <div className="mt-8">
-        <Snippet hideCopyButton hideSymbol variant="bordered">
-          <span>
-            Get started by editing <Code color="primary">app/page.tsx</Code>
-          </span>
-        </Snippet>
       </div>
 
       <div className="flex gap-4 mb-4">
