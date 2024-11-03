@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 const useSocketStore = create((set, get) => {
 
     const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
-    const environment = process.env.NODE_ENV;
+    const environment = false; process.env.NODE_ENV;
 
     return {
         socket: null,
@@ -44,7 +44,7 @@ const useSocketStore = create((set, get) => {
                 toast.error("Socket already connected");
             } else {
                 console.log("Connecting to socket", SOCKET_URL);
-                console.log("IS DEV", environment === "development");
+                //console.log("IS DEV", environment === "development");
                 const options =
                     environment === "development"
                         ? { path: "/api/socket/socketio", addTrailingSlash: false }

@@ -7,8 +7,6 @@ import { button as buttonStyles } from "@nextui-org/theme";
 import { motion } from "framer-motion";
 
 import { useEffect, useState } from 'react';
-
-import { siteConfig } from "@/config/site";
 import { title, subtitle } from "@/components/primitives";
 import { GithubIcon } from "@/components/icons";
 
@@ -214,7 +212,7 @@ export default function Home() {
               variant: "shadow",
               size: "large"
             })}
-            href={siteConfig.links.docs}
+            href={"/home"}
           >
             Start
           </Link>

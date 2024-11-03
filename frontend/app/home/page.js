@@ -16,20 +16,38 @@ export default function Home() {
         id: null,
         players: [],
         isLeader: false,
-        gameStarted: false
+        gameStarted: false,
+        seeker: null
     });
+    const [amSeeker, setAmSeeker] = useState(false);
     const [waitingRoom, setWaitingRoom] = useState(true);
+    const [playerCount, setPlayerCount] = useState(0);
 
     useEffect(() => {
         console.log("Connecting to socket");
         connect();
+
+        //get location
+        navigator.geolocation.getCurrentPosition((position) => {
+            console.log("Latitude is :", position.coords.latitude);
+            console.log("Longitude is :", position.coords.longitude);
+            console.log("Altitude is :", position.coords.altitude);
+        })
+
+
     }, [connect]);
 
     useEffect(() => {
         if (!socket) return;
 
         socket.on("partyJoined", (partyData) => {
-            setParty(partyData);
+            console.log("Party Joined", partyData);
+            setParty(prev => ({
+                ...prev,
+                ...partyData,
+                isLeader: prev.isLeader // Keep isLeader unchanged
+            }));
+            setPlayerCount(partyData.players.length);
             setWaitingRoom(true);
         });
 
@@ -37,14 +55,25 @@ export default function Home() {
             setParty(prev => ({ ...prev, players }));
         });
 
-        socket.on("gameStart", () => {
+        socket.on("gameStarted", (data) => {
             setWaitingRoom(false);
+            setAmSeeker(data.seeker === socket.id);
             setParty(prev => ({ ...prev, gameStarted: true }));
         });
 
         socket.on("assignLeader", () => {
             setParty(prev => ({ ...prev, isLeader: true }));
         });
+
+        socket.on("partyCreated", (partyData) => {
+            setParty({
+                id: partyData.partyId,
+                players: [],
+                isLeader: true,
+                gameStarted: false
+            });
+            setWaitingRoom(true);
+        })
 
 
 
@@ -53,13 +82,15 @@ export default function Home() {
             socket.off("partyUpdated");
             socket.off("gameStart");
             socket.off("assignLeader");
+            socket.off("partyCreated");
         };
     }, [socket]);
 
 
 
     const createParty = () => {
-        socket?.emit("createParty");
+        //pass user data to create party
+        socket?.emit("createParty", socket.id);
     };
 
     const joinParty = (partyId) => {
@@ -121,21 +152,44 @@ export default function Home() {
                         <div>
                             <h2>Party ID: {party.id}</h2>
                             <h3>Players ({party.players.length}):</h3>
+                            {console.log('party.players:', party.players)}
                             {party.players.map(player => (
-                                <div key={player.id}>{player.name}</div>
+                                <div key={player}>{player}</div>
                             ))}
                             {party.isLeader && (
-                                <button onClick={startGame}>Start Game</button>
+                                <>
+                                    {party.players.length === 2 ? (
+                                        <motion.button
+                                            onClick={startGame}
+                                            className="vivid-button bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
+                                        >
+                                            Start Game
+                                        </motion.button>
+                                    ) : (
+                                        <p className="text-red-500">2 players needed to start the game.</p>
+                                    )}
+                                </>
                             )}
                         </div>
                     )}
                 </motion.div>
             ) : (
                 <div className="game-screen">
-                    {/* Game UI goes here */}
+                    <h1>Game Screen</h1>
+                    <h2>Party ID: {party.id}</h2>
+                    <h3>Players ({party.players.length}):</h3>
+                    {party.players.map(player => (
+                        <div key={player.id}>{player.name}</div>
+                    ))}
+                    {amSeeker && <h3>You are the seeker!</h3>}
+
+                    {amSeeker ? (<div> </div>) : (<div> You are the seeker! </div>)}
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 
 
