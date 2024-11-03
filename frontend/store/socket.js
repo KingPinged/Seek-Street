@@ -44,6 +44,7 @@ const useSocketStore = create((set, get) => {
                 toast.error("Socket already connected");
             } else {
                 console.log("Connecting to socket", SOCKET_URL);
+                console.log("IS DEV", environment === "development");
                 const options =
                     environment === "development"
                         ? { path: "/api/socket/socketio", addTrailingSlash: false }

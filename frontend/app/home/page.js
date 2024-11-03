@@ -2,6 +2,12 @@
 import useSocketStore from "@/store/socket";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { Card } from "@nextui-org/card";
+import { Input } from "@nextui-org/input";
+import { Button } from "@nextui-org/button";
+import { Divider } from "@nextui-org/divider";
+
+import { title, subtitle } from "@/components/primitives";
 
 export default function Home() {
     const { socket, connect } = useSocketStore();
@@ -9,11 +15,13 @@ export default function Home() {
     const [party, setParty] = useState({
         id: null,
         players: [],
+        isLeader: false,
         gameStarted: false
     });
     const [waitingRoom, setWaitingRoom] = useState(true);
 
     useEffect(() => {
+        console.log("Connecting to socket");
         connect();
     }, [connect]);
 
@@ -73,12 +81,41 @@ export default function Home() {
                     className="waiting-room"
                 >
                     {!party.id ? (
-                        <div>
-                            <button onClick={createParty}>Create Party</button>
-                            <input
-                                placeholder="Enter Party ID"
-                                onChange={(e) => joinParty(e.target.value)}
-                            />
+                        <div className="flex flex-col gap-8 w-full max-w-md mx-auto">
+                            <motion.div
+                                initial={{ opacity: 0, y: -20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                            >
+                                <Card className="p-6 bg-default-100">
+                                    <h2 className={subtitle()}>Create New Party</h2>
+                                    <p className="text-default-600 mb-4">Start a new game as party leader</p>
+                                    <Button
+                                        color="primary"
+                                        variant="shadow"
+                                        size="lg"
+                                        className="w-full"
+                                        onClick={createParty}
+                                    >
+                                        Create Party
+                                    </Button>
+                                </Card>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <Card className="p-6 bg-default-50">
+                                    <h2 className={subtitle()}>Join Existing Party</h2>
+                                    <p className="text-default-600 mb-4">Enter a party code to join</p>
+                                    <Input
+                                        placeholder="Enter Party ID"
+                                        variant="bordered"
+                                        onChange={(e) => joinParty(e.target.value)}
+                                    />
+                                </Card>
+                            </motion.div>
                         </div>
                     ) : (
                         <div>
