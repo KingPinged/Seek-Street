@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 
 import { useEffect, useState } from 'react';
 import { title, subtitle } from "@/components/primitives";
-import { GithubIcon } from "@/components/icons";
 
 
 export default function Home() {

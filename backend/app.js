@@ -22,7 +22,7 @@ app.get('/', (req, res) => {
 });
 
 const allParties = {};
-
+const allPlayers = {};
 
 
 function generatePartyId() {
@@ -39,6 +39,61 @@ function generatePartyId() {
 // Add socket.io event listeners
 io.on('connection', (socket) => {
   console.log('New client connected');
+
+
+  //TODO maybe add a stack implementation for back tracking
+  socket.on("updateLocation", (data) => {
+    allPlayers[socket.id] = {
+      ...allPlayers[socket.id],
+      ...data,
+      lastUpdate: Date.now()
+    };
+    console.log("LINE 47: " + allPlayers[socket.id])
+
+    //find all players on team
+    const partyId = Object.keys(allParties).find(partyId => allParties[partyId].players.includes(socket.id));
+    if (!partyId) return
+    const party = allParties[partyId];
+    if (!party) return;
+    const players = party.players;
+
+    //if either lat or long is null, return
+    if (data.latitude === null || data.longitude === null) return;
+
+    console.log(allPlayers[socket.id])
+
+
+    io.to(partyId).emit('positionUpdated', players.map(player => {
+      return {
+        id: player,
+        location: { lat: allPlayers[player]?.latitude || 1, lng: allPlayers[player]?.longitude || 1 }
+      }
+    }));
+  })
+
+  socket.on("updateOrientation", (data) => {
+    allPlayers[socket.id] = {
+      ...allPlayers[socket.id],
+      orientation: data,
+      lastUpdate: Date.now()
+    };
+
+    //find all players on team
+    const partyId = Object.keys(allParties).find(partyId => allParties[partyId].players.includes(socket.id));
+    if (!partyId) return
+    const party = allParties[partyId];
+    if (!party) return;
+    const players = party.players;
+
+
+    io.to(partyId).emit('orientationUpdated', players.map(player => {
+      return {
+        id: player,
+        orientation: allPlayers[player]?.orientation || 1
+      }
+
+    }));
+  })
 
   // Listener for 'joinParty' event
   socket.on('joinParty', (partyId) => {
@@ -67,7 +122,7 @@ io.on('connection', (socket) => {
     socket.join(partyId);
     socket.emit('partyCreated', { partyId });
     allParties[partyId] = {
-      partyId, players: [partyData], leader: socket.id, gameStarted: false, seeker: null
+      partyId: partyId, players: [partyData], leader: socket.id, gameStarted: false, seeker: null
     }
 
   });
@@ -81,6 +136,8 @@ io.on('connection', (socket) => {
     const players = party.players;
     const seekerIndex = Math.floor(Math.random() * players.length);
     party.seeker = players[seekerIndex];
+
+    console.log(`Seeker is ${party.seeker}`);
 
     // Handle the event (e.g., start the game for the party)
     io.to(partyId).emit('gameStarted', { party });

@@ -6,10 +6,23 @@ import { Card } from "@nextui-org/card";
 import { Input } from "@nextui-org/input";
 import { Button } from "@nextui-org/button";
 import { Divider } from "@nextui-org/divider";
+import MiniMap from '@/components/Minimap';
+import Stopwatch from '@/components/Stopwatch';
+import toast, { Toaster } from "react-hot-toast";
 
 import { title, subtitle } from "@/components/primitives";
 
 export default function Home() {
+    const rainbowColors = [
+        "#FF0000",
+        "#FF7F00",
+        "#FFFF00",
+        "#00FF00",
+        "#0000FF",
+        "#4B0082",
+        "#8B00FF"
+    ];
+
     const { socket, connect } = useSocketStore();
 
     const [party, setParty] = useState({
@@ -23,25 +36,80 @@ export default function Home() {
     const [waitingRoom, setWaitingRoom] = useState(true);
     const [playerCount, setPlayerCount] = useState(0);
 
+    const [location, setLocation] = useState(null);
+
+    const [partyPosition, setPartyPosition] = useState([]);
+
+    const [seekerStart, setSeekerStart] = useState(null);
+
     useEffect(() => {
         console.log("Connecting to socket");
         connect();
-
-        //get location
-        navigator.geolocation.getCurrentPosition((position) => {
-            console.log("Latitude is :", position.coords.latitude);
-            console.log("Longitude is :", position.coords.longitude);
-            console.log("Altitude is :", position.coords.altitude);
-        })
-
-
     }, [connect]);
+
+    //Decide if take state here or update from server
+    useEffect(() => {
+        if (!socket) return;
+
+        const findPosition = navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                console.log("Location updated", { latitude, longitude });
+                setLocation({ latitude, longitude });
+                socket.emit("updateLocation", { latitude, longitude });
+            },
+            (error) => {
+                console.error("Error getting location", error);
+            }
+        );
+
+        // Watch the device's location
+        const watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                console.log("Location updated", { latitude, longitude });
+                setLocation({ latitude, longitude });
+                socket.emit("updateLocation", { latitude, longitude });
+            },
+            (error) => {
+                console.error("Error getting location", error);
+            }
+        );
+
+        // Clean up the watchPosition on unmount
+        return () => {
+            navigator.geolocation.clearWatch(watchId);
+        };
+    }, [socket]);
+
+    const [deviceOrientation, setDeviceOrientation] = useState(0);
+
+    useEffect(() => {
+        if (!socket) return;
+        const handleOrientation = (event) => {
+            // Alpha is the compass direction (0-360)
+            const heading = event.alpha || 0;
+            setDeviceOrientation(heading);
+            //    console.log("Orientation updated", heading);
+            socket.emit("updateOrientation", heading);
+        };
+
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', handleOrientation);
+        }
+
+        return () => {
+            window.removeEventListener('deviceorientation', handleOrientation);
+        };
+    }, [socket]);
+
 
     useEffect(() => {
         if (!socket) return;
 
         socket.on("partyJoined", (partyData) => {
             console.log("Party Joined", partyData);
+            toast("Player joined the party", { icon: '👏', });
             setParty(prev => ({
                 ...prev,
                 ...partyData,
@@ -57,19 +125,54 @@ export default function Home() {
 
         socket.on("gameStarted", (data) => {
             setWaitingRoom(false);
-            setAmSeeker(data.seeker === socket.id);
+            console.log(data)
+            setAmSeeker(data.party.seeker === socket.id);
             setParty(prev => ({ ...prev, gameStarted: true }));
+
+
+
+            setSeekerStart(location);
+
         });
+
+        socket.on("positionUpdated", (data) => {
+            if (!data) return;
+            setPartyPosition(data);
+        });
+
+        socket.on("orientationUpdated", (data) => {
+            if (!data) return;
+            console.log("Orientation updated", data);
+            setPartyPosition(prev => {
+                return prev.map(player => {
+                    const orientation = data.find(d => d.id === player.id)?.orientation;
+                    return { ...player, orientation };
+                });
+            });
+        });
+
 
         socket.on("assignLeader", () => {
             setParty(prev => ({ ...prev, isLeader: true }));
         });
 
         socket.on("partyCreated", (partyData) => {
+            toast("Party created", { icon: '🎉', });
             setParty({
                 id: partyData.partyId,
                 players: [],
                 isLeader: true,
+                gameStarted: false
+            });
+            setWaitingRoom(true);
+        })
+
+        socket.on("partyDestroyed", () => {
+            toast("Party destroyed", { icon: '😢', });
+            setParty({
+                id: null,
+                players: [],
+                isLeader: false,
                 gameStarted: false
             });
             setWaitingRoom(true);
@@ -105,6 +208,7 @@ export default function Home() {
 
     return (
         <div>
+            <Toaster />
             {waitingRoom ? (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -151,14 +255,14 @@ export default function Home() {
                     ) : (
                         <div>
                             <h2>Party ID: {party.id}</h2>
-                            <h3>Players ({party.players.length}):</h3>
+                            <h3>Players ({playerCount}):</h3>
                             {console.log('party.players:', party.players)}
                             {party.players.map(player => (
                                 <div key={player}>{player}</div>
                             ))}
-                            {party.isLeader && (
+                            {party.isLeader ? (
                                 <>
-                                    {party.players.length === 2 ? (
+                                    {playerCount >= 2 ? (
                                         <motion.button
                                             onClick={startGame}
                                             className="vivid-button bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
@@ -168,9 +272,11 @@ export default function Home() {
                                             Start Game
                                         </motion.button>
                                     ) : (
-                                        <p className="text-red-500">2 players needed to start the game.</p>
+                                        <p className="text-red-500"> More than 2 players needed to start the game.</p>
                                     )}
                                 </>
+                            ) : (
+                                <p className="text-red-500">Waiting for the party leader to start the game...</p>
                             )}
                         </div>
                     )}
@@ -179,13 +285,21 @@ export default function Home() {
                 <div className="game-screen">
                     <h1>Game Screen</h1>
                     <h2>Party ID: {party.id}</h2>
-                    <h3>Players ({party.players.length}):</h3>
+                    <h3>Players {playerCount}:</h3>
                     {party.players.map(player => (
-                        <div key={player.id}>{player.name}</div>
+                        <div key={player}>{player}</div>
                     ))}
-                    {amSeeker && <h3>You are the seeker!</h3>}
+                    {amSeeker && <motion.h3
+                        className="text-2xl font-bold"
+                        animate={{ color: rainbowColors }}
+                        transition={{ repeat: Infinity, duration: 5, ease: "linear" }}
+                    >
+                        You are the seeker!
+                    </motion.h3>}
+                    <h1>NOTICE: This game is meant to be played on mobile devices. Bugs are more likely without proper location tracking.</h1>
 
-                    {amSeeker ? (<div> </div>) : (<div> You are the seeker! </div>)}
+                    <MiniMap players={partyPosition} currentPlayer={socket.id} seekerPosition={seekerStart} />
+                    <Stopwatch />
                 </div>
             )
             }
